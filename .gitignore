@@ -1,0 +1,8 @@
+output/
+cache/
+.Rproj.user/
+.ipynb_checkpoints/
+.Rhistory
+.RData
+
+

@@ -1,0 +1,87 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+library(SpaDES)
+library(reticulate)
+```
+
+```{r}
+cbird = 0.0
+
+setPaths(modulePath = 'modules',
+         inputPath = 'input',
+         outputPath = 'output',
+         cachePath = 'cache')
+paths <- getPaths()
+scenario.name <- "maxharv"
+
+modules <- list('spades_ws3_dataInit', 'spades_ws3')
+base.year <- 2020   
+#basenames <- c("tsa08", "tsa)
+basenames <- list(c("bc25"))
+horizon <- 1
+times <- list(start = 0, end = horizon - 1)
+tifPath = "tif"
+hdtPath = "hdt"
+hdtPrefix = "hdt_"
+outputs <-data.frame(objectName = "landscape")
+
+scheduler.mode <- "optimize"
+target.masks <- list(c('? ? ? ?'))
+target.areas <- list(0)
+target.scalefactors <- NULL
+
+params <- list(spades_ws3_dataInit = list(basenames = basenames,
+                                          tifPath = tifPath,
+                                          hdtPath = hdtPath,
+                                          hdtPrefix = hdtPrefix,
+                                          base.year = base.year,
+                                          .saveInitialTime = 0,
+                                          .saveInterval = 1,
+                                          .saveObjects = c("landscape"),
+                                          .savePath = file.path(paths$outputPath, "landscape")),
+               spades_ws3 = list(basenames = basenames,
+                                 scenario.name = scenario.name,
+                                 cbird = cbird,
+                                 horizon = 8,
+                                 tifPath = tifPath,
+                                 hdtPath = hdtPath,
+                                 hdtPrefix = hdtPrefix,
+                                 base.year = base.year,
+                                 scheduler.mode = scheduler.mode,
+                                 target.masks = target.masks,
+                                 target.areas = target.areas,
+                                 target.scalefactors = target.scalefactors))
+sim <- simInit(paths=paths, modules=modules, times=times, params=params, outputs=outputs)
+simOut <- spades(sim, debug=TRUE)
+```
+
+```{python}
+fm_outputs = {}
+for tsa in basenames:
+    fm_outputs[tsa] = {}
+    fm_outputs[tsa]['harvested_area'] = [fm.compile_product(p, '1', acode='harvest', mask='%s ? ? ?' % tsa) / fm.period_length for p in range(1, fm.horizon+1)] 
+    fm_outputs[tsa]['harvested_volume'] = [fm.compile_product(p, 'totvol * %0.2f' % util, acode='harvest', mask='%s ? ? ?' % tsa) / fm.period_length for p in range(1, fm.horizon+1)] 
+    fm_outputs[tsa]['bird_density'] = [fm.inventory(p, yname='birdaf', mask='%s ? ? ?' % tsa) for p in range(1, fm.horizon+1)]
+pickle.dump(fm_outputs, open('output_archived/fm_outputs_cbird%s.pkl' % r.cbird, 'wb'))
+fm.problems['maxharv']._m.write('output_archived/gurobimodel_cbird%s.mps' % r.cbird)
+pickle.dump(fm.compile_schedule(), open('output_archived/fm_schedule_cbird%s.pkl' % r.cbird, 'wb'))
+os.system('tar cvfz output_archived/output_cbird%s.tar.gz output' % r.cbird)
+os.system('tar cvfz output_archived/tif_cbird%s.tar.gz input/tif' % r.cbird)
+```
+
+
+
+```{r}
+#years <- 2020:2099
+#harvested.area.tsa00 <- sapply(years, function(x){return(cellStats(raster(paste0('input/tif/tsa00/projected_harvest_', x, '.tif')), sum) * 6.25)})
+#harvested.area.tsa08 <- sapply(years, #function(x){return(cellStats(raster(paste0('input/tif/tsa08/projected_harvest_', x, '.tif')), sum) * 6.25)})
+
+```
