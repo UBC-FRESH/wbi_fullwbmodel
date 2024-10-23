@@ -1,5 +1,7 @@
 # wbi_fullwbmodel
 
+Hi!
+
 This project compiles a SpaDES model that can be used to simulate harvesting on
 the full extent of the WBI study area (i.e., the entire Canadian western boreal forest, 
 covering parts of BC, AB, SK, MB).
